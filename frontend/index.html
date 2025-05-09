@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat com PDF - Atendente Virtual</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    .assistant {
+      position: relative;
+      margin: 20px 0;
+    }
+    .speech-bubble {
+      position: absolute;
+      top: -100px;
+      left: 110px;
+      background: white;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+      max-width: 300px;
+    }
+    .assistant img {
+      width: 100px;
+      height: 100px;
+    }
+    .chat-area {
+      margin-top: 20px;
+      width: 100%;
+      max-width: 500px;
+    }
+    .chat-area textarea {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      resize: none;
+    }
+    .chat-area button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+    }
+    input[type="file"] {
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Atendente Virtual - Chat com PDF</h1>
+
+  <input type="file" id="pdfUpload" accept="application/pdf" />
+
+  <div class="assistant">
+    <img src="https://i.imgur.com/CHuCYyM.png" alt="Atendente" />
+    <div class="speech-bubble" id="response">Olá! Envie um PDF para começarmos!</div>
+  </div>
+
+  <div class="chat-area">
+    <textarea id="userInput" rows="3" placeholder="Faça sua pergunta sobre o PDF..."></textarea>
+    <button onclick="askPDF()">Perguntar</button>
+    <button onclick="startListening()">🎤 Falar</button>
+  </div>
+
+  <script>
+    const pdfUpload = document.getElementById('pdfUpload');
+    const responseBubble = document.getElementById('response');
+    const userInput = document.getElementById('userInput');
+
+    let conversationHistory = [];
+
+    pdfUpload.addEventListener('change', async () => {
+      const file = pdfUpload.files[0];
+      if (!file) return;
+      const formData = new FormData();
+      formData.append('file', file);
+
+      responseBubble.textContent = 'Processando o PDF...';
+
+      const res = await fetch('http://localhost:8000/upload/', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      responseBubble.textContent = data.message;
+      speak(data.message);
+      conversationHistory = [];
+    });
+
+    async function askPDF() {
+      const query = userInput.value;
+      if (!query) return;
+
+      responseBubble.textContent = 'Pensando...';
+      conversationHistory.push({ role: 'user', content: query });
+
+      const res = await fetch('http://localhost:8000/chat/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ query, history: conversationHistory })
+      });
+
+      const data = await res.json();
+      const answer = data.answer || data.error;
+      responseBubble.textContent = answer;
+      speak(answer);
+
+      conversationHistory.push({ role: 'assistant', content: answer });
+    }
+
+    function speak(text) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'pt-BR';
+      speechSynthesis.speak(utterance);
+    }
+
+    function startListening() {
+      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      recognition.lang = 'pt-BR';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.start();
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        userInput.value = transcript;
+        askPDF();
+      };
+
+      recognition.onerror = (event) => {
+        responseBubble.textContent = 'Erro no reconhecimento de voz: ' + event.error;
+      };
+    }
+  </script>
+</body>
+</html>
