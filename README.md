@@ -78,8 +78,4 @@ Pull requests são bem-vindos! Para grandes mudanças, abra uma issue primeiro p
 Desenvolvido com ❤️ por Felipe Silvestre
 Baseado em explorações com LangChain, FastAPI e OpenAI.
 
----
 
-## 📄 Licença
-
-Este projeto está licenciado sob a Licença MIT — veja o arquivo LICENSE para mais detalhes.
